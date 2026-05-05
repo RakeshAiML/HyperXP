@@ -1,0 +1,7 @@
+.env
+__pycache__/
+*.pyc
+backend/outputs/
+node_modules/
+dist/
+.superpowers/
