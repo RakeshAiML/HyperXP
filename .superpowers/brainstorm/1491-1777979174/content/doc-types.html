@@ -1,0 +1,33 @@
+<h2>What types of documents will users upload?</h2>
+<p class="subtitle">Select all that apply — this shapes which OCR engine and pipeline stages we need</p>
+
+<div class="options" data-multiselect>
+  <div class="option" data-choice="handwritten-forms" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Handwritten Forms</h3>
+      <p>Paper forms filled out by hand — insurance, medical, government, intake sheets. Needs HTR (handwritten text recognition).</p>
+    </div>
+  </div>
+  <div class="option" data-choice="scanned-typed" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Scanned Typed / Printed Documents</h3>
+      <p>Typed documents scanned to PDF or image — invoices, contracts, reports. Standard OCR handles these well.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="native-pdf" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Native Digital PDFs</h3>
+      <p>PDFs with selectable text already embedded (no OCR needed) — exported from Word, Excel, accounting software.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="mixed" onclick="toggleSelect(this)">
+    <div class="letter">D</div>
+    <div class="content">
+      <h3>Mixed / Hybrid</h3>
+      <p>A combination of the above — e.g., a typed form with handwritten fill-ins, or batches that include any of the above types.</p>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,93 @@
+<h2>Complete POC Design — Approve to Proceed</h2>
+<p class="subtitle">BPR Extraction · GPT-4o Vision · Excel Output</p>
+
+<div class="section">
+  <h3>What gets built</h3>
+  <p>A web app where a user uploads the 4-page BPR PDF and gets back a structured Excel file with 2 sheets — no database, no login, no fluff.</p>
+</div>
+
+<div class="section">
+  <h3>Tech Stack</h3>
+  <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px">
+    <div style="padding:10px 16px;background:rgba(255,255,255,0.07);border-radius:6px;min-width:140px">
+      <div class="label">Frontend</div>
+      <div style="margin-top:4px">React + Vite</div>
+      <div style="font-size:12px;opacity:0.6;margin-top:2px">File upload + download button</div>
+    </div>
+    <div style="padding:10px 16px;background:rgba(255,255,255,0.07);border-radius:6px;min-width:140px">
+      <div class="label">Backend</div>
+      <div style="margin-top:4px">Python FastAPI</div>
+      <div style="font-size:12px;opacity:0.6;margin-top:2px">REST endpoint, orchestration</div>
+    </div>
+    <div style="padding:10px 16px;background:rgba(255,255,255,0.07);border-radius:6px;min-width:140px">
+      <div class="label">PDF → Image</div>
+      <div style="margin-top:4px">PyMuPDF</div>
+      <div style="font-size:12px;opacity:0.6;margin-top:2px">300 DPI PNG per page</div>
+    </div>
+    <div style="padding:10px 16px;background:rgba(255,255,255,0.07);border-radius:6px;min-width:140px">
+      <div class="label">AI Extraction</div>
+      <div style="margin-top:4px">GPT-4o Vision</div>
+      <div style="font-size:12px;opacity:0.6;margin-top:2px">Your OpenAI subscription</div>
+    </div>
+    <div style="padding:10px 16px;background:rgba(255,255,255,0.07);border-radius:6px;min-width:140px">
+      <div class="label">Excel</div>
+      <div style="margin-top:4px">openpyxl</div>
+      <div style="font-size:12px;opacity:0.6;margin-top:2px">.xlsx with yellow highlights</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Pipeline (4 steps)</h3>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center">
+    <div style="padding:8px 14px;background:rgba(76,175,80,0.15);border:1px solid rgba(76,175,80,0.4);border-radius:6px;font-size:13px">1. Upload PDF</div>
+    <div style="opacity:0.5">→</div>
+    <div style="padding:8px 14px;background:rgba(156,39,176,0.15);border:1px solid rgba(156,39,176,0.4);border-radius:6px;font-size:13px">2. Convert to 4 PNGs</div>
+    <div style="opacity:0.5">→</div>
+    <div style="padding:8px 14px;background:rgba(33,150,243,0.15);border:1px solid rgba(33,150,243,0.4);border-radius:6px;font-size:13px">3. GPT-4o extracts JSON</div>
+    <div style="opacity:0.5">→</div>
+    <div style="padding:8px 14px;background:rgba(255,152,0,0.15);border:1px solid rgba(255,152,0,0.4);border-radius:6px;font-size:13px">4. Validate + Excel</div>
+    <div style="opacity:0.5">→</div>
+    <div style="padding:8px 14px;background:rgba(244,67,54,0.15);border:1px solid rgba(244,67,54,0.4);border-radius:6px;font-size:13px">5. Download .xlsx</div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Excel Output — 2 Sheets</h3>
+  <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">
+    <div style="flex:1;min-width:280px;padding:14px;background:rgba(255,255,255,0.05);border-radius:8px;border:1px solid rgba(255,255,255,0.1)">
+      <div class="label">Sheet 1 · BPR Header</div>
+      <p style="font-size:13px;margin-top:6px">22 columns · 1 row per BPR<br>Product, Batch No, dates, durations, all 4 sign-off fields (Yes/No + date each), QA stamp, Form No</p>
+    </div>
+    <div style="flex:1;min-width:280px;padding:14px;background:rgba(255,255,255,0.05);border-radius:8px;border:1px solid rgba(255,255,255,0.1)">
+      <div class="label">Sheet 2 · Raw Materials</div>
+      <p style="font-size:13px;margin-top:6px">14 columns · 35 rows (all materials)<br>Name, UOM, Std Qty, Charged Qty, AR No, Eq ID, Remarks, Performed+Checked (sign+date), Flag, <strong style="color:#ff9800">Confidence</strong></p>
+    </div>
+  </div>
+  <p style="font-size:12px;opacity:0.6;margin-top:10px">Low-confidence cells highlighted yellow · Dashes extracted as empty · * and ** captured in Flag column</p>
+</div>
+
+<div class="section">
+  <h3>GPT-4o Prompting</h3>
+  <p style="font-size:13px">All 4 page images sent in <strong>one API call</strong> with two JSON schemas embedded in the prompt — one for the header block, one for the raw materials table. Model instructed to: use null for dashes, flag ambiguous handwriting as Low confidence, normalize all dates to DD/MM/YYYY.</p>
+</div>
+
+<div class="section">
+  <h3>Project Structure</h3>
+  <pre style="font-size:12px;opacity:0.8;background:rgba(0,0,0,0.2);padding:12px;border-radius:6px;line-height:1.7">HyperXP/
+  backend/
+    main.py          ← FastAPI app + /extract endpoint
+    extractor.py     ← GPT-4o Vision API calls
+    excel_gen.py     ← openpyxl workbook builder
+    validator.py     ← Field checks + date normalization
+    requirements.txt
+  frontend/
+    src/
+      App.jsx        ← Upload UI + status + download button
+    package.json</pre>
+</div>
+
+<div style="margin-top:24px;padding:16px;background:rgba(76,175,80,0.1);border-radius:8px;border:1px solid rgba(76,175,80,0.3)">
+  <p class="label">Does this design look right?</p>
+  <p style="margin:6px 0 0;font-size:13px">If yes, I'll write the spec doc and then create the implementation plan. Let me know if you want to change anything.</p>
+</div>

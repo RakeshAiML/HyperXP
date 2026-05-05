@@ -1,0 +1,70 @@
+<h2>3 Approaches to BPR Extraction</h2>
+<p class="subtitle">Pick the one that fits best — or tell me to mix them</p>
+
+<div class="options">
+  <div class="option" data-choice="gpt4o-only" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>GPT-4o Vision Only <span style="font-size:12px;color:#4caf50;font-weight:600;">★ Recommended</span></h3>
+      <p>PDF → images → GPT-4o Vision per page with a schema prompt → JSON → Excel. No extra services beyond your existing OpenAI subscription.</p>
+      <div class="pros-cons" style="margin-top:10px">
+        <div class="pros"><h4>Pros</h4><ul>
+          <li>Fastest POC — one API</li>
+          <li>Best-in-class handwriting reading</li>
+          <li>Understands context (e.g. "BX5" = batch × 5)</li>
+          <li>No new subscriptions</li>
+        </ul></div>
+        <div class="cons"><h4>Cons</h4><ul>
+          <li>Cost scales with page count</li>
+          <li>Needs careful prompt for 87-page docs</li>
+          <li>Occasional hallucination — needs validation layer</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="azure-plus-gpt" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Azure Document Intelligence + GPT-4o</h3>
+      <p>Azure DI extracts layout, tables, and printed text → GPT-4o fills in handwritten values → JSON → Excel.</p>
+      <div class="pros-cons" style="margin-top:10px">
+        <div class="pros"><h4>Pros</h4><ul>
+          <li>Azure DI is optimized for table/form extraction</li>
+          <li>Lower GPT-4o token cost (only sends uncertain regions)</li>
+          <li>GxP-ready audit trail from Azure</li>
+        </ul></div>
+        <div class="cons"><h4>Cons</h4><ul>
+          <li>Needs Azure subscription + setup</li>
+          <li>Two APIs to orchestrate</li>
+          <li>Longer POC timeline (2–3 weeks)</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="batch-pipeline" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>GPT-4o Batch API + Async Pipeline</h3>
+      <p>Same as A but uses OpenAI's Batch API (50% cost reduction) with async processing queue — designed for high-volume production.</p>
+      <div class="pros-cons" style="margin-top:10px">
+        <div class="pros"><h4>Pros</h4><ul>
+          <li>50% cheaper than real-time API</li>
+          <li>Built for processing many BPRs overnight</li>
+          <li>Scales to thousands of documents</li>
+        </ul></div>
+        <div class="cons"><h4>Cons</h4><ul>
+          <li>Results in ~24hrs (not real-time)</li>
+          <li>More infra to build (queues, status tracking)</li>
+          <li>Overkill for POC</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;padding:16px;background:rgba(255,255,255,0.05);border-radius:8px;border-left:3px solid #4caf50">
+  <p class="label">My recommendation</p>
+  <p><strong>Start with A for the POC</strong> — GPT-4o Vision is genuinely excellent at reading pharmaceutical handwritten forms like this BPR. You can ship a working demo in days, validate accuracy on real BPRs, and migrate to B or C only if cost or compliance demands it.</p>
+</div>

@@ -1,0 +1,67 @@
+<h2>BPR Extraction Pipeline — Architecture</h2>
+<p class="subtitle">End-to-end flow from PDF upload to structured Excel output</p>
+
+<div style="display:flex;flex-direction:column;gap:12px;margin-top:16px">
+
+  <!-- Stage 1 -->
+  <div style="display:flex;align-items:center;gap:12px">
+    <div style="min-width:36px;height:36px;border-radius:50%;background:#4caf50;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">1</div>
+    <div style="flex:1;padding:14px 18px;background:rgba(255,255,255,0.07);border-radius:8px;border-left:3px solid #4caf50">
+      <h3 style="margin:0 0 4px">Upload & Convert</h3>
+      <p style="margin:0;font-size:13px;opacity:0.8">User uploads PDF via web UI → Backend converts each page to a high-res PNG image (300 DPI) using <strong>pdf2image / PyMuPDF</strong>. Handles multi-page BPRs (87 pages).</p>
+    </div>
+  </div>
+
+  <div style="margin-left:18px;color:#4caf50;font-size:20px">↓</div>
+
+  <!-- Stage 2 -->
+  <div style="display:flex;align-items:center;gap:12px">
+    <div style="min-width:36px;height:36px;border-radius:50%;background:#2196f3;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">2</div>
+    <div style="flex:1;padding:14px 18px;background:rgba(255,255,255,0.07);border-radius:8px;border-left:3px solid #2196f3">
+      <h3 style="margin:0 0 4px">Page Classification</h3>
+      <p style="margin:0;font-size:13px;opacity:0.8">GPT-4o Vision identifies the <strong>section type</strong> of each page — Header, Raw Material Table, Process Steps, In-Process Checks, Sign-off page — so we know which extraction schema to apply.</p>
+    </div>
+  </div>
+
+  <div style="margin-left:18px;color:#2196f3;font-size:20px">↓</div>
+
+  <!-- Stage 3 -->
+  <div style="display:flex;align-items:center;gap:12px">
+    <div style="min-width:36px;height:36px;border-radius:50%;background:#9c27b0;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">3</div>
+    <div style="flex:1;padding:14px 18px;background:rgba(255,255,255,0.07);border-radius:8px;border-left:3px solid #9c27b0">
+      <h3 style="margin:0 0 4px">GPT-4o Schema Extraction</h3>
+      <p style="margin:0;font-size:13px;opacity:0.8">Each page image + its schema prompt is sent to <strong>GPT-4o Vision</strong>. Returns structured JSON with all field values — including handwritten quantities, lot numbers, dates, and signature presence (✓/✗). Runs pages in parallel.</p>
+    </div>
+  </div>
+
+  <div style="margin-left:18px;color:#9c27b0;font-size:20px">↓</div>
+
+  <!-- Stage 4 -->
+  <div style="display:flex;align-items:center;gap:12px">
+    <div style="min-width:36px;height:36px;border-radius:50%;background:#ff9800;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">4</div>
+    <div style="flex:1;padding:14px 18px;background:rgba(255,255,255,0.07);border-radius:8px;border-left:3px solid #ff9800">
+      <h3 style="margin:0 0 4px">Validation & Merge</h3>
+      <p style="margin:0;font-size:13px;opacity:0.8">Rule-based checks: required fields present, numeric quantities reasonable, dates parseable. Multi-page tables (Raw Material rows 1–35 across pages 1–4) are stitched together. Low-confidence fields flagged for review.</p>
+    </div>
+  </div>
+
+  <div style="margin-left:18px;color:#ff9800;font-size:20px">↓</div>
+
+  <!-- Stage 5 -->
+  <div style="display:flex;align-items:center;gap:12px">
+    <div style="min-width:36px;height:36px;border-radius:50%;background:#f44336;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">5</div>
+    <div style="flex:1;padding:14px 18px;background:rgba(255,255,255,0.07);border-radius:8px;border-left:3px solid #f44336">
+      <h3 style="margin:0 0 4px">Excel Generation</h3>
+      <p style="margin:0;font-size:13px;opacity:0.8">Structured JSON → <strong>openpyxl</strong> Excel workbook with separate sheets: <em>BPR Header</em>, <em>Raw Materials</em>, <em>Process Steps</em>, etc. Flagged cells highlighted in yellow. Download via web UI.</p>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top:24px;padding:14px 18px;background:rgba(255,255,255,0.05);border-radius:8px;display:flex;gap:32px;flex-wrap:wrap">
+  <div><span class="label">Frontend</span><p style="margin:4px 0 0">React + file upload UI</p></div>
+  <div><span class="label">Backend</span><p style="margin:4px 0 0">Python FastAPI</p></div>
+  <div><span class="label">OCR / AI</span><p style="margin:4px 0 0">OpenAI GPT-4o Vision</p></div>
+  <div><span class="label">Excel</span><p style="margin:4px 0 0">openpyxl</p></div>
+  <div><span class="label">PDF→Image</span><p style="margin:4px 0 0">PyMuPDF</p></div>
+</div>
