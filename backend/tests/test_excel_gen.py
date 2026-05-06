@@ -1,3 +1,4 @@
+import pytest
 from io import BytesIO
 from openpyxl import load_workbook
 from excel_gen import generate_workbook
@@ -111,3 +112,14 @@ def test_second_sheet_data_correct():
     ws = wb["Shift Log"]
     assert ws.cell(row=2, column=1).value == "06/10/2025"
     assert ws.cell(row=2, column=2).value == "A"
+
+
+def test_empty_sheets_raises():
+    with pytest.raises(ValueError, match="at least one"):
+        generate_workbook([])
+
+
+def test_sheet_name_truncated_to_31_chars():
+    long_name_sheets = [{"name": "A" * 40, "columns": [], "rows": []}]
+    wb = load_workbook(BytesIO(generate_workbook(long_name_sheets)))
+    assert wb.sheetnames[0] == "A" * 31
