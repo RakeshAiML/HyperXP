@@ -31,7 +31,7 @@ export default function App() {
     setResult(null)
     setDownloadUrl(null)
     setErrorMsg(null)
-  }, [pdfUrl])
+  }, [])
 
   const handleExtract = useCallback(async () => {
     if (!file) return
