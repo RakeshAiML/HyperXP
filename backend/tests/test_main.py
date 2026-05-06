@@ -1,84 +1,82 @@
 import json
 from unittest.mock import patch
-
-import fitz
-import pytest
 from fastapi.testclient import TestClient
-
 from main import app
 
 client = TestClient(app)
 
-
-def _make_pdf(pages: int = 1) -> bytes:
-    doc = fitz.open()
-    for i in range(pages):
-        page = doc.new_page()
-        page.insert_text((72, 72), f"BPR page {i + 1}")
-    return doc.tobytes()
-
-
-_MOCK_EXTRACTED = {
-    "header": {
-        "product_name": "ETC-4 compound",
-        "product_code": "ETC-4",
-        "stage_code": "ETC-4",
-        "batch_no": "ETC-4/00425",
-        "batch_size": "13.00 Kg",
-        "start_date": "06/10/2025",
-        "start_time": "07:40",
-        "end_date": "11/10/2025",
-        "end_time": "13:05",
-        "duration": "125/25 hrs",
-        "bpr_checked_after_execution": None,
-        "qa_issue_date": None,
-        "qa_issue_time": None,
-        "prepared_by_pd_signed": True,
-        "prepared_by_pd_date": "24/09/2025",
-        "reviewed_by_pd_signed": True,
-        "reviewed_by_pd_date": "24/09/2025",
-        "reviewed_by_rd_signed": True,
-        "reviewed_by_rd_date": "26/09/2025",
-        "approved_by_qa_signed": True,
-        "approved_by_qa_date": "24/09/2025",
-        "form_no": "FM03/QA/SOP/005-01",
-        "effective_date": "24/09/2025",
-    },
-    "materials": [],
+_MOCK_EXTRACT_RESULT = {
+    "document_type": "Batch Production Record",
+    "sheets": [
+        {
+            "name": "Raw Materials",
+            "columns": ["S.No", "Material Name"],
+            "rows": [
+                {
+                    "S.No":          {"value": "1",     "confidence": "high"},
+                    "Material Name": {"value": "ETC-3", "confidence": "high"},
+                }
+            ],
+        }
+    ],
 }
 
 
-def test_extract_returns_200_with_excel_url():
-    with patch("main.extract_bpr", return_value=_MOCK_EXTRACTED):
-        res = client.post("/extract", files={"file": ("test.pdf", _make_pdf(), "application/pdf")})
-    assert res.status_code == 200
-    body = res.json()
-    assert body["status"] == "complete"
-    assert body["excel_url"].startswith("/download/")
-    assert body["excel_url"].endswith(".xlsx")
+def _make_pdf_bytes() -> bytes:
+    import fitz
+    doc = fitz.open()
+    doc.new_page()
+    buf = doc.tobytes()
+    doc.close()
+    return buf
 
 
 def test_extract_rejects_non_pdf():
-    res = client.post("/extract", files={"file": ("test.txt", b"hello world", "text/plain")})
-    assert res.status_code == 400
-    assert "PDF" in res.json()["detail"]
+    response = client.post("/extract", files={"file": ("doc.txt", b"hello", "text/plain")})
+    assert response.status_code == 400
 
 
-def test_extract_returns_502_on_gpt_failure():
-    with patch("main.extract_bpr", side_effect=ValueError("GPT-4o returned invalid JSON")):
-        res = client.post("/extract", files={"file": ("test.pdf", _make_pdf(), "application/pdf")})
-    assert res.status_code == 502
+def test_extract_returns_document_type_and_sheets():
+    with patch("main.extract_generic", return_value=_MOCK_EXTRACT_RESULT):
+        pdf = _make_pdf_bytes()
+        response = client.post("/extract", files={"file": ("bpr.pdf", pdf, "application/pdf")})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "complete"
+    assert data["document_type"] == "Batch Production Record"
+    assert len(data["sheets"]) == 1
+    assert "excel_url" in data
 
 
-def test_download_returns_xlsx():
-    with patch("main.extract_bpr", return_value=_MOCK_EXTRACTED):
-        extract_res = client.post("/extract", files={"file": ("test.pdf", _make_pdf(), "application/pdf")})
-    filename = extract_res.json()["excel_url"].split("/download/")[1]
-    dl_res = client.get(f"/download/{filename}")
-    assert dl_res.status_code == 200
-    assert "spreadsheetml" in dl_res.headers["content-type"]
+def test_extract_returns_502_on_empty_sheets():
+    with patch("main.extract_generic", return_value={"document_type": "x", "sheets": []}):
+        pdf = _make_pdf_bytes()
+        response = client.post("/extract", files={"file": ("bpr.pdf", pdf, "application/pdf")})
+    assert response.status_code == 502
 
 
-def test_download_missing_file_returns_404():
-    res = client.get("/download/does_not_exist.xlsx")
-    assert res.status_code == 404
+def test_save_returns_excel_url():
+    response = client.post("/save", json={
+        "document_type": "Test Doc",
+        "sheets": _MOCK_EXTRACT_RESULT["sheets"],
+    })
+    assert response.status_code == 200
+    assert "excel_url" in response.json()
+
+
+def test_save_rejects_empty_sheets():
+    response = client.post("/save", json={"sheets": []})
+    assert response.status_code == 400
+
+
+def test_download_404_for_unknown_file():
+    response = client.get("/download/nonexistent_abc123.xlsx")
+    assert response.status_code == 404
+
+
+def test_make_filename_slug():
+    from main import _make_filename
+    name = _make_filename("Batch Production Record — Raw Materials")
+    assert name.endswith(".xlsx")
+    assert " " not in name
+    assert "—" not in name
