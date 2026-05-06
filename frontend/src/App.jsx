@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -14,9 +14,17 @@ export default function App() {
   const [dragOver,    setDragOver]    = useState(false)
   const fileRef = useRef(null)
 
+  useEffect(() => {
+    return () => { if (pdfUrl) URL.revokeObjectURL(pdfUrl) }
+  }, [pdfUrl])
+
   const loadFile = useCallback((f) => {
     if (!f || !f.name.toLowerCase().endsWith('.pdf')) return
-    if (pdfUrl) URL.revokeObjectURL(pdfUrl)
+    if (f.size > 20 * 1024 * 1024) {
+      setErrorMsg('File exceeds the 20 MB limit.')
+      setStatus('error')
+      return
+    }
     setFile(f)
     setPdfUrl(URL.createObjectURL(f))
     setStatus('idle')
@@ -25,7 +33,7 @@ export default function App() {
     setErrorMsg(null)
   }, [pdfUrl])
 
-  const handleExtract = async () => {
+  const handleExtract = useCallback(async () => {
     if (!file) return
     setStatus('extracting')
     setResult(null)
@@ -44,7 +52,7 @@ export default function App() {
       setErrorMsg(err.message)
       setStatus('error')
     }
-  }
+  }, [file])
 
   const busy = status === 'extracting'
 
@@ -163,8 +171,9 @@ function DataPane({ result, onSaved }) {
       rows: s.rows.map(r => ({ ...r })),
     }))
   )
-  const [hasEdits, setHasEdits] = useState(false)
-  const [saving,   setSaving]   = useState(false)
+  const [hasEdits,   setHasEdits]   = useState(false)
+  const [saving,     setSaving]     = useState(false)
+  const [saveError,  setSaveError]  = useState(null)
 
   const updateCell = useCallback((sheetIdx, rowIdx, colName, newValue) => {
     setEditedSheets(prev => {
@@ -198,8 +207,9 @@ function DataPane({ result, onSaved }) {
       if (!res.ok) throw new Error(data.detail || 'Save failed')
       onSaved(`${API}${data.excel_url}`)
       setHasEdits(false)
+      setSaveError(null)
     } catch (err) {
-      alert(`Save failed: ${err.message}`)
+      setSaveError(err.message)
     } finally {
       setSaving(false)
     }
@@ -225,12 +235,19 @@ function DataPane({ result, onSaved }) {
         </div>
       )}
 
+      {saveError && (
+        <div style={{ padding: '8px 18px', background: '#FAEAEA', color: '#8B1A1A', fontSize: 12, borderBottom: '1px solid #CEC7B0' }}>
+          Save failed: {saveError}
+          <button onClick={() => setSaveError(null)} style={{ marginLeft: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#8B1A1A', fontWeight: 600 }}>✕</button>
+        </div>
+      )}
+
       <div className="doc-type-bar">
         <span className="doc-type-label">{document_type}</span>
       </div>
 
       {editedSheets.map((sheet, si) => (
-        <section key={si} className="section">
+        <section key={sheet.name} className="section">
           <div className="section-hd">
             <span className="section-title">{sheet.name}</span>
             <span className="row-count">{sheet.rows.length} rows</span>
