@@ -1,6 +1,8 @@
 import base64
 import json
+import logging
 import os
+import re
 from typing import List, Optional
 
 from openai import OpenAI
@@ -40,12 +42,9 @@ def _encode(png_bytes: bytes) -> str:
 
 def _parse_response(raw: str) -> dict:
     text = raw.strip()
-    if text.startswith("```"):
-        parts = text.split("```")
-        text = parts[1]
-        if text.startswith("json"):
-            text = text[4:]
-        text = text.strip()
+    m = re.search(r"```(?:json)?\s*(\{.*\})\s*```", text, re.DOTALL)
+    if m:
+        text = m.group(1).strip()
     return json.loads(text)
 
 
@@ -72,13 +71,18 @@ def _call_api(images: List[bytes], client: OpenAI) -> dict:
 
 def extract_generic(images: List[bytes], client: Optional[OpenAI] = None) -> dict:
     """Extract all tables from PDF page images. Returns {document_type, sheets}."""
+    if not images:
+        raise ValueError("images must be non-empty")
     if client is None:
-        client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is not set")
+        client = OpenAI(api_key=api_key)
     try:
         return _call_api(images, client)
-    except (json.JSONDecodeError, KeyError, IndexError):
-        pass
+    except (json.JSONDecodeError, KeyError, IndexError, AttributeError) as e:
+        logging.warning("GPT-4o first attempt failed (%s), retrying…", e)
     try:
         return _call_api(images, client)
-    except (json.JSONDecodeError, KeyError, IndexError) as e:
+    except (json.JSONDecodeError, KeyError, IndexError, AttributeError) as e:
         raise ValueError(f"GPT-4o returned invalid JSON after retry: {e}") from e

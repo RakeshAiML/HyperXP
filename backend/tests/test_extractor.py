@@ -89,3 +89,8 @@ def test_raises_if_sheets_missing():
     )
     # extract_generic itself does not raise — caller (main.py) raises on empty sheets
     assert result["sheets"] == []
+
+
+def test_raises_on_empty_images():
+    with pytest.raises(ValueError, match="non-empty"):
+        extract_generic([], client=_mock_client(json.dumps(_MOCK_RESULT)))
