@@ -7,7 +7,38 @@
       "Bash(bash \"C:/Users/Rakes/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/brainstorming/scripts/start-server.sh\" --project-dir \"C:/Users/Rakes/OneDrive/Desktop/HyperXP\")",
       "Bash(git init *)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(pytest tests/test_pdf_converter.py -v)",
+      "Bash(python -m pytest tests/test_pdf_converter.py -v)",
+      "Bash(pytest tests/test_validator.py -v)",
+      "PowerShell(pip install pytest)",
+      "Bash(python -m pytest tests/test_validator.py -v)",
+      "Bash(python -m pytest tests/test_excel_gen.py -v)",
+      "Bash(python -m pytest tests/test_excel_gen.py -v --tb=short)",
+      "Bash(python -m pytest tests/test_extractor.py -v)",
+      "Bash(python -m pytest tests/test_main.py -v)",
+      "Bash(python -c \"import fitz; doc = fitz.open\\(\\); page = doc.new_page\\(\\); print\\(dir\\(doc\\)\\)\")",
+      "Bash(python -c \"import fitz; print\\(fitz.__version__\\); doc = fitz.open\\(\\); page = doc.new_page\\(\\); b = doc.tobytes\\(\\); print\\(type\\(b\\), len\\(b\\)\\)\")",
+      "Bash(python -m pytest -v)",
+      "Bash(npm run *)",
+      "Bash(pytest -v)",
+      "Bash(Test-Path \"C:/Users/Rakes/OneDrive/Desktop/HyperXP/.env\")",
+      "Bash(taskkill /F /IM node.exe /T)",
+      "PowerShell(Stop-Process -Name node -Force -ErrorAction SilentlyContinue)",
+      "PowerShell(python --version)",
+      "Bash(Get-ChildItem \"C:\\\\Users\\\\Rakes\\\\OneDrive\\\\Desktop\\\\HyperXP\" -Force)",
+      "Bash(python -c ' *)",
+      "Bash(del bpr2_page*.png)",
+      "PowerShell(New-Item -ItemType Directory -Force -Path \"C:\\\\Users\\\\Rakes\\\\OneDrive\\\\Desktop\\\\HyperXP\\\\docs\\\\superpowers\\\\specs\")",
+      "Bash(git -C \"C:/Users/Rakes/OneDrive/Desktop/HyperXP\" add backend/excel_gen.py backend/tests/test_excel_gen.py)",
+      "Bash(git -C C:/Users/Rakes/OneDrive/Desktop/HyperXP commit -m ' *)",
+      "Bash(Get-ChildItem -Path 'C:\\\\Users\\\\Rakes\\\\OneDrive\\\\Desktop\\\\HyperXP' -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(python3)",
+      "Bash(python)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\Rakes\\OneDrive\\Desktop\\HyperXP"
     ]
   }
 }
