@@ -74,6 +74,11 @@ def test_download_404_for_unknown_file():
     assert response.status_code == 404
 
 
+def test_download_rejects_path_traversal():
+    response = client.get("/download/../../../etc/passwd")
+    assert response.status_code in (400, 404)
+
+
 def test_make_filename_slug():
     from main import _make_filename
     name = _make_filename("Batch Production Record — Raw Materials")

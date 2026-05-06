@@ -59,7 +59,10 @@ async def extract(file: UploadFile = File(...)):
     if not sheets:
         raise HTTPException(status_code=502, detail="No tables found in document")
 
-    xlsx_bytes = generate_workbook(sheets)
+    try:
+        xlsx_bytes = generate_workbook(sheets)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Excel generation failed: {exc}") from exc
     filename = _make_filename(result.get("document_type", "document"))
     (_OUTPUT_DIR / filename).write_bytes(xlsx_bytes)
 
@@ -76,7 +79,10 @@ async def save(body: dict = Body(...)):
     sheets = body.get("sheets", [])
     if not sheets:
         raise HTTPException(status_code=400, detail="No sheets provided")
-    xlsx_bytes = generate_workbook(sheets)
+    try:
+        xlsx_bytes = generate_workbook(sheets)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Excel generation failed: {exc}") from exc
     filename = _make_filename(body.get("document_type", "document"))
     (_OUTPUT_DIR / filename).write_bytes(xlsx_bytes)
     return {"excel_url": f"/download/{filename}"}
@@ -84,7 +90,9 @@ async def save(body: dict = Body(...)):
 
 @app.get("/download/{filename}")
 def download(filename: str):
-    path = _OUTPUT_DIR / filename
+    path = (_OUTPUT_DIR / filename).resolve()
+    if not path.is_relative_to(_OUTPUT_DIR.resolve()):
+        raise HTTPException(status_code=400, detail="Invalid filename")
     if not path.exists():
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(
