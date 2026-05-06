@@ -3,7 +3,7 @@ import uuid
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Body, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
@@ -16,9 +16,12 @@ load_dotenv()
 
 app = FastAPI(title="HyperXP BPR Extraction")
 
+
+_ALLOWED_ORIGINS = [o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173").split(",")]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=_ALLOWED_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -57,7 +60,26 @@ async def extract(file: UploadFile = File(...)):
     filename = f"bpr_{batch_no}_{uuid.uuid4().hex[:6]}.xlsx"
     (_OUTPUT_DIR / filename).write_bytes(xlsx_bytes)
 
-    return {"status": "complete", "excel_url": f"/download/{filename}"}
+    return {
+        "status": "complete",
+        "excel_url": f"/download/{filename}",
+        "header": header,
+        "header_confidence": data.get("header_confidence", {}),
+        "materials": materials,
+        "missing_fields": missing,
+    }
+
+
+@app.post("/save")
+async def save(body: dict = Body(...)):
+    header = body.get("header", {})
+    materials = body.get("materials", [])
+    missing = validate_header(header)
+    xlsx_bytes = generate_workbook(header, materials, missing)
+    batch_no = (header.get("batch_no") or "unknown").replace("/", "_")
+    filename = f"bpr_{batch_no}_{uuid.uuid4().hex[:6]}.xlsx"
+    (_OUTPUT_DIR / filename).write_bytes(xlsx_bytes)
+    return {"excel_url": f"/download/{filename}"}
 
 
 @app.get("/download/{filename}")

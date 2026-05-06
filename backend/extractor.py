@@ -6,7 +6,6 @@ from typing import List, Optional
 from openai import OpenAI
 
 _SYSTEM_PROMPT = """You are a pharmaceutical document extraction assistant specializing in Batch Production Records (BPRs).
-Extract all data from the provided BPR page images into the exact JSON schema below.
 
 Rules:
 - Use null for any cell with a dash (—), left blank, or not filled in
@@ -18,58 +17,89 @@ Rules:
 
 Return ONLY valid JSON matching the schema. No markdown fences, no explanations, no extra text."""
 
-_SCHEMA = """{
-  "header": {
-    "product_name": "<string|null>",
-    "product_code": "<string|null>",
-    "stage_code": "<string|null>",
-    "batch_no": "<string|null>",
-    "batch_size": "<string|null>",
-    "start_date": "<DD/MM/YYYY|null>",
-    "start_time": "<HH:MM|null>",
-    "end_date": "<DD/MM/YYYY|null>",
-    "end_time": "<HH:MM|null>",
-    "duration": "<string|null>",
-    "bpr_checked_after_execution": "<DD/MM/YYYY|null>",
-    "qa_issue_date": "<DD/MM/YYYY|null>",
-    "qa_issue_time": "<HH:MM|null>",
-    "prepared_by_pd_signed": "<boolean>",
-    "prepared_by_pd_date": "<DD/MM/YYYY|null>",
-    "reviewed_by_pd_signed": "<boolean>",
-    "reviewed_by_pd_date": "<DD/MM/YYYY|null>",
-    "reviewed_by_rd_signed": "<boolean>",
-    "reviewed_by_rd_date": "<DD/MM/YYYY|null>",
-    "approved_by_qa_signed": "<boolean>",
-    "approved_by_qa_date": "<DD/MM/YYYY|null>",
-    "form_no": "<string|null>",
-    "effective_date": "<string|null>"
-  },
-  "materials": [
-    {
-      "sno": "<number>",
-      "material_name": "<string>",
-      "uom": "<string|null>",
-      "standard_qty": "<string|null>",
-      "charged_qty": "<string|null>",
-      "ar_no": "<string|null>",
-      "weighing_eq_id": "<string|null>",
-      "remarks": "<string|null>",
-      "performed_by_signed": "<boolean>",
-      "performed_by_date": "<DD/MM/YYYY|null>",
-      "checked_by_signed": "<boolean>",
-      "checked_by_date": "<DD/MM/YYYY|null>",
-      "flag": "<'*'|'**'|''>",
-      "confidence": "<'high'|'low'>"
-    }
-  ]
+_HEADER_SCHEMA = """{
+  "product_name": "<string|null>",
+  "product_code": "<string|null>",
+  "stage_code": "<string|null>",
+  "batch_no": "<string|null>",
+  "batch_size": "<string|null>",
+  "start_date": "<DD/MM/YYYY|null>",
+  "start_time": "<HH:MM|null>",
+  "end_date": "<DD/MM/YYYY|null>",
+  "end_time": "<HH:MM|null>",
+  "duration": "<string|null>",
+  "bpr_checked_after_execution": "<DD/MM/YYYY|null>",
+  "qa_issue_date": "<DD/MM/YYYY|null>",
+  "qa_issue_time": "<HH:MM|null>",
+  "prepared_by_pd_signed": "<boolean>",
+  "prepared_by_pd_date": "<DD/MM/YYYY|null>",
+  "reviewed_by_pd_signed": "<boolean>",
+  "reviewed_by_pd_date": "<DD/MM/YYYY|null>",
+  "reviewed_by_rd_signed": "<boolean>",
+  "reviewed_by_rd_date": "<DD/MM/YYYY|null>",
+  "approved_by_qa_signed": "<boolean>",
+  "approved_by_qa_date": "<DD/MM/YYYY|null>",
+  "form_no": "<string|null>",
+  "effective_date": "<string|null>",
+  "confidence": {
+    "product_name": "<'high'|'low'>",
+    "product_code": "<'high'|'low'>",
+    "stage_code": "<'high'|'low'>",
+    "batch_no": "<'high'|'low'>",
+    "batch_size": "<'high'|'low'>",
+    "start_date": "<'high'|'low'>",
+    "start_time": "<'high'|'low'>",
+    "end_date": "<'high'|'low'>",
+    "end_time": "<'high'|'low'>",
+    "duration": "<'high'|'low'>",
+    "bpr_checked_after_execution": "<'high'|'low'>",
+    "qa_issue_date": "<'high'|'low'>",
+    "qa_issue_time": "<'high'|'low'>",
+    "prepared_by_pd_signed": "<'high'|'low'>",
+    "prepared_by_pd_date": "<'high'|'low'>",
+    "reviewed_by_pd_signed": "<'high'|'low'>",
+    "reviewed_by_pd_date": "<'high'|'low'>",
+    "reviewed_by_rd_signed": "<'high'|'low'>",
+    "reviewed_by_rd_date": "<'high'|'low'>",
+    "approved_by_qa_signed": "<'high'|'low'>",
+    "approved_by_qa_date": "<'high'|'low'>",
+    "form_no": "<'high'|'low'>",
+    "effective_date": "<'high'|'low'>"
+  }
 }"""
+
+_MATERIALS_SCHEMA = """[
+  {
+    "sno": "<number>",
+    "material_name": "<string>",
+    "uom": "<string|null>",
+    "standard_qty": "<string|null>",
+    "charged_qty": "<string|null>",
+    "ar_no": "<string|null>",
+    "weighing_eq_id": "<string|null>",
+    "remarks": "<string|null>",
+    "performed_by_signed": "<boolean>",
+    "performed_by_date": "<DD/MM/YYYY|null>",
+    "checked_by_signed": "<boolean>",
+    "checked_by_date": "<DD/MM/YYYY|null>",
+    "flag": "<'*'|'**'|''>",
+    "confidence": "<'high'|'low'>"
+  }
+]"""
 
 
 def _encode(png_bytes: bytes) -> str:
     return base64.b64encode(png_bytes).decode("utf-8")
 
 
-def _parse_response(raw: str) -> dict:
+def _image_content(png_bytes: bytes) -> dict:
+    return {
+        "type": "image_url",
+        "image_url": {"url": f"data:image/png;base64,{_encode(png_bytes)}", "detail": "high"},
+    }
+
+
+def _parse_response(raw: str):
     text = raw.strip()
     if text.startswith("```"):
         parts = text.split("```")
@@ -80,25 +110,45 @@ def _parse_response(raw: str) -> dict:
     return json.loads(text)
 
 
-def _call_api(images: List[bytes], client: OpenAI) -> dict:
+def _call_header(images: List[bytes], client: OpenAI) -> dict:
     content = [
-        {"type": "text", "text": f"Extract all data from these {len(images)} BPR pages using this schema:\n\n{_SCHEMA}"}
+        {"type": "text", "text": f"Extract the BPR header block from page 1 of these {len(images)} images using this schema:\n\n{_HEADER_SCHEMA}"},
     ]
     for png in images:
-        content.append({
-            "type": "image_url",
-            "image_url": {"url": f"data:image/png;base64,{_encode(png)}", "detail": "high"},
-        })
+        content.append(_image_content(png))
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
             {"role": "system", "content": _SYSTEM_PROMPT},
             {"role": "user", "content": content},
         ],
-        max_tokens=4096,
+        max_tokens=2048,
         temperature=0,
     )
-    return _parse_response(response.choices[0].message.content)
+    result = _parse_response(response.choices[0].message.content)
+    if not isinstance(result, dict):
+        return {}, {}
+    confidence = result.pop("confidence", {})
+    return result, confidence
+
+
+def _call_materials(images: List[bytes], client: OpenAI) -> list:
+    content = [
+        {"type": "text", "text": f"Extract ALL rows from the Raw Materials table spanning all {len(images)} pages using this schema for each row:\n\n{_MATERIALS_SCHEMA}\n\nReturn a JSON array of all material rows. Include every row even if partially filled."},
+    ]
+    for png in images:
+        content.append(_image_content(png))
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": _SYSTEM_PROMPT},
+            {"role": "user", "content": content},
+        ],
+        max_tokens=16384,
+        temperature=0,
+    )
+    result = _parse_response(response.choices[0].message.content)
+    return result if isinstance(result, list) else []
 
 
 def extract_bpr(images: List[bytes], client: Optional[OpenAI] = None) -> dict:
@@ -107,12 +157,13 @@ def extract_bpr(images: List[bytes], client: Optional[OpenAI] = None) -> dict:
         client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
     try:
-        return _call_api(images, client)
-    except (json.JSONDecodeError, KeyError, IndexError):
-        pass
+        header, header_confidence = _call_header(images, client)
+    except (json.JSONDecodeError, KeyError, IndexError) as e:
+        raise ValueError(f"GPT-4o returned invalid JSON for header: {e}") from e
 
-    # Retry once
     try:
-        return _call_api(images, client)
+        materials = _call_materials(images, client)
     except (json.JSONDecodeError, KeyError, IndexError) as e:
         raise ValueError(f"GPT-4o returned invalid JSON after retry: {e}") from e
+
+    return {"header": header, "header_confidence": header_confidence, "materials": materials}
