@@ -266,15 +266,12 @@ function DataPane({ result, onSaved }) {
                     {sheet.columns.map(col => {
                       const cell = row[col] || { value: null, confidence: 'high' }
                       return (
-                        <td key={col} className={
-                          cell.value == null ? 'cell-null' :
-                          cell.confidence === 'low' ? 'cell-low' : ''
-                        }>
-                          <EditableCell
-                            value={cell.value}
-                            onChange={v => updateCell(si, ri, col, v)}
-                          />
-                        </td>
+                        <EditableCell
+                          key={col}
+                          value={cell.value}
+                          confidence={cell.confidence}
+                          onChange={v => updateCell(si, ri, col, v)}
+                        />
                       )
                     })}
                   </tr>
@@ -290,38 +287,36 @@ function DataPane({ result, onSaved }) {
 
 // ─── EditableCell ─────────────────────────────────────────────────────────────
 
-function EditableCell({ value, onChange }) {
+function EditableCell({ value, confidence, onChange }) {
   const [editing, setEditing] = useState(false)
   const [draft,   setDraft]   = useState('')
 
-  if (editing) {
-    const commit = () => {
-      setEditing(false)
-      onChange(draft)
-    }
-    return (
-      <input
-        className="cell-input"
-        value={draft}
-        autoFocus
-        onChange={e => setDraft(e.target.value)}
-        onBlur={commit}
-        onKeyDown={e => {
-          if (e.key === 'Enter') commit()
-          if (e.key === 'Escape') setEditing(false)
-        }}
-      />
-    )
-  }
+  const tdClass = value == null ? 'cell-null' : confidence === 'low' ? 'cell-low' : ''
+
+  const startEdit = () => { setDraft(value != null ? String(value) : ''); setEditing(true) }
+
+  const commit = () => { setEditing(false); onChange(draft) }
 
   return (
-    <span
-      className={value == null ? 'null-cell' : ''}
-      onClick={() => { setDraft(value != null ? String(value) : ''); setEditing(true) }}
-      title="Click to edit"
-    >
-      {value != null ? String(value) : '—'}
-    </span>
+    <td className={tdClass} onClick={!editing ? startEdit : undefined} title="Click to edit">
+      {editing ? (
+        <input
+          className="cell-input"
+          value={draft}
+          autoFocus
+          onChange={e => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={e => {
+            if (e.key === 'Enter') commit()
+            if (e.key === 'Escape') setEditing(false)
+          }}
+        />
+      ) : (
+        <span className={value == null ? 'null-cell' : ''}>
+          {value != null ? String(value) : '—'}
+        </span>
+      )}
+    </td>
   )
 }
 
